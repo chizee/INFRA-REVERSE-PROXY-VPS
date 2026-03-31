@@ -15,17 +15,17 @@ This document details the complete setup of a reverse proxy architecture using *
 ```
                             Internet
                                │
-                    ┌──────────┴──────────┐
-                    │   Cloudflare DNS    │
-                    │  (omenabyte.com)    │
-                    └──────────┬──────────┘
+                   ┌──────────┴──────────┐
+                   │   Cloudflare DNS     │
+                   │  (yourdomain.com)    │
+                   └──────────┬──────────┘
                                │
                                ▼
-                    ┌─────────────────────┐
-                    │  Caddy (Ports 80,443)│ ← Public HTTPS endpoint
-                    │  System Service      │
-                    └──────────┬──────────┘
-                               │
+                   ┌─────────────────────┐
+                   │  Caddy (Ports 80,443)│ ← Public HTTPS endpoint
+                   │  System Service      │
+                   └──────────┬──────────┘
+                              │
     ┌──────────────────────────┼──────────────────────────┐
     │                          │                          │
     ▼                          ▼                          ▼
@@ -34,22 +34,22 @@ This document details the complete setup of a reverse proxy architecture using *
 │ coolify.xxx     │   │   apps via      │   │ (Portainer,     │
 │ localhost:8000  │   │ localhost:8000  │   │   Agent Zero)   │
 │                 │   │                 │   │ localhost:5080  │
-│ WS: :6001, :6002│   │                 │   │ 10.0.2.2:9000   │
+│ WS: :6001, :6002│   │                 │   │ INTERNAL_IP:9000  │
 └─────────────────┘   └─────────────────┘   └─────────────────┘
     │                          │                          │
     └──────────────────────────┼──────────────────────────┘
                                │
-                    ┌──────────┴──────────┐
-                    │  Docker Bridge Network│
-                    │  Coolify Services     │
-                    │  - coolify (8000)     │
-                    │  - coolify-db         │
-                    │  - coolify-redis      │
-                    │  - coolify-realtime   │
-                    │  - coolify-sentinel   │
-                    │  - portainer (9000)   │
-                    │  - agent-zero (5080)  │
-                    └───────────────────────┘
+                   ┌──────────┴──────────┐
+                   │  Docker Bridge Network│
+                   │  Coolify Services     │
+                   │  - coolify (8000)     │
+                   │  - coolify-db         │
+                   │  - coolify-redis      │
+                   │  - coolify-realtime   │
+                   │  - coolify-sentinel   │
+                   │  - portainer (9000)   │
+                   │  - agent-zero (5080)  │
+                   └───────────────────────┘
 ```
 
 ---
@@ -75,10 +75,10 @@ This document details the complete setup of a reverse proxy architecture using *
 
 | Service         | Domain                        | Routing Method      | Upstream        |
 |-----------------|-------------------------------|--------------------|-----------------|
-| Coolify         | coolify.omenabyte.com         | Caddy → localhost | localhost:8000 |
-| Portainer       | portainer.omenabyte.com       | Direct (bypass)   | 10.0.2.2:9000   |
-| Agent Zero      | agent0.omenabyte.com          | Direct (bypass)   | localhost:5080  |
-| Coolify Apps    | app.yourdomain.com           | Caddy → Coolify   | localhost:8000  |
+| Coolify         | coolify.yourdomain.com       | Caddy → localhost | localhost:8000 |
+| Portainer       | portainer.yourdomain.com     | Direct (bypass)   | INTERNAL_IP:9000   |
+| Agent Zero      | agent0.yourdomain.com        | Direct (bypass)   | localhost:5080  |
+| Coolify Apps    | app.yourdomain.com           | Caddy → Coolify   | localhost:8000 |
 
 ---
 
@@ -134,7 +134,7 @@ systemctl start caddy
 
 ```bash
 # Use official installer (add --resolve if DNS issues)
-curl --resolve cdn.coollabs.io:443:79.127.134.229 -fsSL https://cdn.coollabs.io/coolify/install.sh | bash
+curl --resolve cdn.coollabs.io:443:CLOUDFLARE_ORIGIN_IP -fsSL https://cdn.coollabs.io/coolify/install.sh | bash
 ```
 
 This automatically:
@@ -152,7 +152,7 @@ Create `/etc/caddy/Caddyfile`:
 # Global Options
 # -----------------------------------------------
 {
-    email admin@omenabyte.com
+    email admin@yourdomain.com
     admin localhost:2019
 }
 
@@ -166,7 +166,7 @@ Create `/etc/caddy/Caddyfile`:
 # -----------------------------------------------
 # Coolify Dashboard
 # -----------------------------------------------
-coolify.omenabyte.com {
+coolify.yourdomain.com {
     reverse_proxy localhost:8000
 
     # WebSocket proxy for realtime
@@ -184,14 +184,14 @@ coolify.omenabyte.com {
 # -----------------------------------------------
 # Portainer (Direct route - bypass Coolify)
 # -----------------------------------------------
-portainer.omenabyte.com {
-    reverse_proxy 10.0.2.2:9000
+portainer.yourdomain.com {
+    reverse_proxy INTERNAL_IP:9000
 }
 
 # -----------------------------------------------
 # Agent Zero (Direct route - bypass Coolify)
 # -----------------------------------------------
-agent0.omenabyte.com {
+agent0.yourdomain.com {
     reverse_proxy 127.0.0.1:5080 {
         header_up X-Forwarded-Proto https
     }
@@ -284,12 +284,12 @@ For standalone containers not managed by Coolify:
 
 3. **Add to Caddy** (get container IP):
    ```
-   portainer.omenabyte.com {
-       reverse_proxy 10.0.2.2:9000
+   portainer.yourdomain.com {
+       reverse_proxy INTERNAL_IP:9000
    }
    ```
 
-4. **Access**: `https://portainer.omenabyte.com`
+4. **Access**: `https://portainer.yourdomain.com`
 
 ### Agent Zero (Standalone Docker)
 
@@ -298,14 +298,14 @@ For standalone containers not managed by Coolify:
 
 2. **Add to Caddy**:
    ```
-   agent0.omenabyte.com {
+   agent0.yourdomain.com {
        reverse_proxy 127.0.0.1:5080 {
            header_up X-Forwarded-Proto https
        }
    }
    ```
 
-3. **Access**: `https://agent0.omenabyte.com`
+3. **Access**: `https://agent0.yourdomain.com`
 
 ---
 
@@ -354,7 +354,7 @@ ss -tlnp | grep -E '80|443|8000|5080|9000|6001|6002'
 ### Update Coolify
 
 ```bash
-curl --resolve cdn.coollabs.io:443:79.127.134.229 -fsSL https://cdn.coollabs.io/coolify/install.sh | bash
+curl --resolve cdn.coollabs.io:443:CLOUDFLARE_ORIGIN_IP -fsSL https://cdn.coollabs.io/coolify/install.sh | bash
 ```
 
 ### Backup Configuration
@@ -371,7 +371,7 @@ cp /etc/caddy/Caddyfile ~/caddy-backup.conf
 
 ```bash
 # Restart Coolify
-cd /data/coolify/source && docker compose restart
+cd /data/coolify/source/docker compose restart
 
 # Restart Caddy
 systemctl reload caddy
@@ -412,8 +412,8 @@ docker restart <container-name>
 | coolify-db | coolify | (internal) |
 | coolify-redis | coolify | (internal) |
 | coolify-realtime | coolify | (internal) |
-| portainer | root_default | 10.0.2.2 |
-| agent-zero | bridge | 10.0.0.3 |
+| portainer | root_default | INTERNAL_IP |
+| agent-zero | bridge | INTERNAL_IP |
 
 *Maintained by Omenabyte Intelligence*
 *Last updated: 2026-03-31*

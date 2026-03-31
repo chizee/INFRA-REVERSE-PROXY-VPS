@@ -1,7 +1,6 @@
 # VPS DNS Resolution Issue - Troubleshooting & Fix
 
 > **Date**: April 1, 2026  
-> **Server**: vmi3108871 (Contabo VPS)  
 > **Issue**: GitHub/npm/Cloudflare blocked while other sites work  
 
 ---
@@ -11,8 +10,8 @@
 ### Symptoms
 - `npx skills add` and `git clone` from GitHub **failed**
 - `curl https://github.com` **timed out**
-- `dig @213.136.95.10 github.com` **timed out**
-- **Ping to GitHub worked** (4ms latency)
+- `dig @PROVIDER_DNS github.com` **timed out**
+- **Ping to GitHub worked** (low latency)
 - **Google DNS (8.8.8.8) resolved GitHub correctly**
 
 ### Error Messages
@@ -29,13 +28,13 @@ curl: (28) Resolving timed out after 10000 milliseconds
 
 ### DNS Server Failure
 
-The VPS hosting provider (Contabo) assigns DNS servers that **cannot resolve external domains properly**:
+The VPS hosting provider assigns DNS servers that **cannot resolve external domains properly**:
 
 | DNS Server | Status |
 |------------|--------|
-| `213.136.95.10` | ❌ Timeouts on GitHub queries |
-| `213.136.95.11` | ❌ Timeouts on GitHub queries |
-| `2a02:c207::1:53` | ❌ IPv6 also failing |
+| `PROVIDER_DNS_1` | ❌ Timeouts on GitHub queries |
+| `PROVIDER_DNS_2` | ❌ Timeouts on GitHub queries |
+| `PROVIDER_DNS_IPV6` | ❌ IPv6 also failing |
 | `1.1.1.1` (Cloudflare) | ✅ Works |
 | `8.8.8.8` (Google) | ✅ Works |
 
@@ -46,12 +45,12 @@ The VPS hosting provider (Contabo) assigns DNS servers that **cannot resolve ext
 ### Technical Details
 ```
 # DNS resolution test - FAILS
-$ dig @213.136.95.10 github.com
-;; communications error to 213.136.95.10#53: timed out
+$ dig @PROVIDER_DNS github.com
+;; communications error to PROVIDER_DNS#53: timed out
 
 # DNS resolution test - WORKS  
 $ dig @1.1.1.1 github.com
-140.82.121.3
+RESOLVED_IP
 
 # HTTPS test - FAILS without fix
 $ curl https://github.com
@@ -59,7 +58,7 @@ curl: (28) Resolving timed out after 10000 milliseconds
 
 # HTTPS test - WORKS after fix
 $ curl https://github.com
-Connected to github.com (140.82.121.3) port 443
+Connected to github.com (RESOLVED_IP) port 443
 ```
 
 ---
@@ -75,9 +74,9 @@ Connected to github.com (140.82.121.3) port 443
 ```yaml
 nameservers:
   addresses:
-  - 213.136.95.10
-  - 213.136.95.11
-  - 2a02:c207::1:53
+  - PROVIDER_DNS_1
+  - PROVIDER_DNS_2
+  - PROVIDER_DNS_IPV6
 ```
 
 **After**:
@@ -142,13 +141,13 @@ fatal: unable to access 'https://github.com/...': Could not resolve host
 ### Post-Fix Tests (Passed)
 ```bash
 $ curl --max-time 10 https://github.com
-Connected to github.com (140.82.121.3) port 443
+Connected to github.com (RESOLVED_IP) port 443
 [Success]
 
 $ npx --yes skills add https://github.com/vercel-labs/skills --skill find-skills
 ✓ Installed 1 skill
 
-$ git clone https://github.com/chizee/repo.git
+$ git clone https://github.com/user/repo.git
 Cloning into 'repo'...
 [Success]
 ```
@@ -184,7 +183,7 @@ git config --global url."https://github.com".insteadOf "git@github.com:"
 ### Current Server Setup
 | Component | Configuration |
 |-----------|---------------|
-| **Host** | Contabo VPS |
+| **Host** | VPS (Provider) |
 | **Reverse Proxy** | Caddy |
 | **VPN** | TailScale |
 | **Containers** | Docker + Coolify |
@@ -197,7 +196,7 @@ git config --global url."https://github.com".insteadOf "git@github.com:"
 /etc/systemd/resolved.conf.d/      # DNS resolver config
 /etc/caddy/Caddyfile               # Reverse proxy config
 /root/.ssh/                        # SSH keys
-~/.agents/skills/                  # Global skills (find-skills installed)
+~/.agents/skills/                  # Global skills
 ```
 
 ---

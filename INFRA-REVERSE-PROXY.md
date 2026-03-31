@@ -16,12 +16,12 @@ Internet (80/443)
         │
    Caddy (standalone)
         │
-        ├── coolify.domain.com     → Coolify dashboard     (localhost:8443)
+        ├── coolify.yourdomain.com     → Coolify dashboard     (localhost:8443)
         │
-        ├── app1.domain.com        → Coolify's proxy        (localhost:8080)
-        ├── app2.domain.com        ↑ (host-based routing,  Coolify handles internally)
+        ├── app1.yourdomain.com        → Coolify's proxy        (localhost:8080)
+        ├── app2.yourdomain.com        ↑ (host-based routing,  Coolify handles internally)
         │
-        └── other.domain.com       → Standalone service     (localhost:PORT)
+        └── other.yourdomain.com       → Standalone service     (localhost:PORT)
 ```
 
 **Rule:** Only Caddy owns ports 80 and 443. Everything else is internal.
